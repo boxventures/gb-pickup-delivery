@@ -1,14 +1,25 @@
 const Container = window.styled.div`
   max-width: 750px;
-  margin: 3rem auto;
+  margin: 0 auto 1.5rem;
   text-align: center;
 `
-
 const Section = window.styled.section`
   margin: 1.5rem auto;
   display: flex;
   flex-direction: column;
   align-items: center;
+`
+const SectionTitle = window.styled.h2`
+  margin-bottom: 1.5rem;
+`
+const Button = window.styled.button`
+  padding: 1rem 1.5rem;
+  font-size: 1.2rem;
+  cursor: pointer;
+  ${props => props.primary ?
+    `background: black;
+     color: white;` : ''
+  }
 `
 
 const Row = window.styled.div`
@@ -134,7 +145,7 @@ function GrocerBoxComponent({ config }) {
         if (!items.find(item => item.handle === config.grocerbox_product)) {
           const variant = res.variants[0];
           const window = windows[parseInt(variant.option2, 10)];
-          CartJS.addItem(variant.id, 1, { code: btoa(window.code) }, {
+          CartJS.addItem(variant.id, 1, { code: btoa(`${variant.option1}:${window.code}`) }, {
             error: (error) => handleError(`Error adding Grocer Box product: ${error}`)
           });
         }
@@ -192,8 +203,8 @@ function GrocerBoxComponent({ config }) {
 
   const refundableItem = cart ? cart.items.find(item => item.handle === config.refundable_hold_product) : null;
 
-  const windowCode = gbItem && gbItem.properties.code ? atob(gbItem.properties.code).split(':')[1] : null;
-  const serviceType = gbItem ? gbItem.variant_options[0] : null;
+  const windowCode = gbItem && gbItem.properties && gbItem.properties.code ? atob(gbItem.properties.code).split(':')[1] : null;
+  const serviceType = gbItem && gbItem.variant_options ? gbItem.variant_options[0] : null;
 
   const generateServiceWindows = () => {
     const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -211,10 +222,14 @@ function GrocerBoxComponent({ config }) {
     setServiceWindows(options);
   }
 
+  const handleContinue = () => {
+    document.getElementById("gb-cart-btn").click();
+  }
+
   return (
     <Container>
       <Section>
-        <h3>Would you like pickup or delivery?</h3>
+        <SectionTitle>Would you like pickup or delivery?</SectionTitle>
 
         <Row>
           <ServiceType active={serviceType === 'D' } disabled={loading} onClick={() => setServiceType('D')}>Delivery</ServiceType>
@@ -223,7 +238,7 @@ function GrocerBoxComponent({ config }) {
       </Section>
 
       <Section>
-        <h3>When?</h3>
+        <SectionTitle>When?</SectionTitle>
         <Row>
           {serviceWindows.map((window, index) =>
             <ServiceWindow
@@ -244,7 +259,7 @@ function GrocerBoxComponent({ config }) {
           <div className="gb-ellipsis">
             <div></div><div></div><div></div><div></div>
           </div> :
-          <button>Continue</button>
+          <Button onClick={handleContinue} primary>Continue</Button>
         }
       </Section>
     </Container>
