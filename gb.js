@@ -138,10 +138,8 @@ function GrocerBoxComponent({ config }) {
       .catch(error => handleError(`GrocerBox: Error fetching product '${handle}': ${error}`))
   }
 
-  {% comment %}
-    If no gb item, set to first variant.
-    If gb item but window not available, reset to first variant.
-  {% endcomment %}
+  // If no gb item, set to first variant.
+  // If gb item but window not available, reset to first variant.
   const setGrocerBoxItem = (items, windows) => {
     getProduct(config.grocerbox_product)
       .then(res => {
