@@ -138,16 +138,27 @@ function GrocerBoxComponent({ config }) {
       .catch(error => handleError(`GrocerBox: Error fetching product '${handle}': ${error}`))
   }
 
+  {% comment %}
+    If no gb item, set to first variant.
+    If gb item but window not available, reset to first variant.
+  {% endcomment %}
   const setGrocerBoxItem = (items, windows) => {
     getProduct(config.grocerbox_product)
       .then(res => {
-        setProduct(res)
-        if (!items.find(item => item.handle === config.grocerbox_product)) {
-          const variant = res.variants[0];
-          const window = windows[parseInt(variant.option2, 10)];
-          CartJS.addItem(variant.id, 1, { code: btoa(`${variant.option1}:${window.code}`) }, {
+        setProduct(res);
+        const firstVariant = res.variants[0];
+        const grocerBoxItem = items.find(item => item.handle === config.grocerbox_product);
+        if (!grocerBoxItem) {
+          const window = windows[parseInt(firstVariant.option2, 10)];
+          CartJS.addItem(firstVariant.id, 1, { code: btoa(`${firstVariant.option1}:${window.code}`) }, {
             error: (error) => handleError(`Error adding Grocer Box product: ${error}`)
           });
+        } else {
+          const [serviceType, code] = atob(grocerBoxItem.properties.code).split(':');
+          const windowIsAvailable = availableWindows.find(w => w.code === code);
+          if (!windowIsAvailable) {
+            setVariant(firstVariant);
+          }
         }
       });
   }
