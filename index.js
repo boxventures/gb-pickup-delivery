@@ -192,7 +192,7 @@ class GrocerBox {
   }
 
   getItem() {
-    return CartJS.cart.items.find(item => item.handle === '{{settings.grocerbox_pickup_delivery}}');
+    return CartJS.cart.items.find(item => item.handle === this.grocerbox_pickup_delivery);
   }
 
   get(path = '', data = {}) {
