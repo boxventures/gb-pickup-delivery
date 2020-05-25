@@ -1,4 +1,4 @@
-export default function GrocerBoxComponent() {
+function GrocerBoxComponent() {
   return (
     <div>
       <h1>Hello</h1>
