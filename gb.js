@@ -48,7 +48,7 @@ const ServiceWindow = window.styled.button`
   margin: 1rem;
   cursor: pointer;
   opacity: 0.5;
-  transition: 100ms all ease-in-out;
+  transition: 50ms all ease-in-out;
   ${props => props.active ? `
   transform: scale(1.2);
   opacity: 1;` :''}
@@ -69,8 +69,57 @@ function GrocerBoxComponent({ config }) {
   const [product, setProduct] = React.useState();
   const [cart, setCart] = React.useState();
   const [gbItem, setGbItem] = React.useState();
+  const [windowCode, setWindowCode] = React.useState();
+  const [serviceType, setServiceTypeVal] = React.useState();
   const [cartLoading, setCartLoading] = React.useState(false);
 
+  const refundableItem = cart ? cart.items.find(item => item.handle === config.refundable_hold_product) : null;
+
+  // Effects
+  React.useEffect(() => {
+    init();
+
+    $(document).on('cart.ready', (event, c) => {
+      // console.log({ event, c })
+    });
+
+    $(document).on('cart.requestStarted', (event, c) => {
+      // console.log({ event, c })
+      setCartLoading(true);
+    });
+
+    $(document).on('cart.requestComplete', (event, c) => {
+      // console.log({ event, c })
+      setCartLoading(false);
+      setCart({ ...c });
+    });
+  }, []);
+
+  React.useEffect(() => {
+    if (cart) {
+      const item = cart.items.find(item => item.handle === config.grocerbox_product);
+      setGbItem({ ...item })
+    }
+  }, [cart]);
+
+  React.useEffect(() => {
+    if (gbItem && gbItem.properties && gbItem.properties.code) {
+      setWindowCode(atob(gbItem.properties.code).split(':')[1])
+    }
+    if (gbItem && gbItem.variant_options) {
+      setServiceTypeVal(gbItem.variant_options[0]);
+    }
+  }, [gbItem]);
+
+  React.useEffect(() => {
+    // console.log({ product })
+  }, [product]);
+
+  React.useEffect(() => {
+    generateServiceWindows()
+  }, [availableWindows]);
+
+  // Functions
   const init = () => {
     CartJS.getCart().then(res => {
       setCart(res);
@@ -82,41 +131,6 @@ function GrocerBoxComponent({ config }) {
       });
     });
   }
-
-  React.useEffect(() => {
-    init();
-
-    $(document).on('cart.ready', (event, c) => {
-      console.log({ event, c })
-    });
-
-    $(document).on('cart.requestStarted', (event, c) => {
-      console.log({ event, c })
-      setCartLoading(true);
-    });
-
-    $(document).on('cart.requestComplete', (event, c) => {
-      console.log({ event, c })
-      setCartLoading(false);
-      setCart({ ...c });
-    });
-  }, []);
-
-  React.useEffect(() => {
-    if (cart) {
-      const item = cart.items.find(item => item.handle === config.grocerbox_product);
-      console.log({ cart, item })
-      setGbItem({ ...item })
-    }
-  }, [cart]);
-
-  React.useEffect(() => {
-    console.log({ product })
-  }, [product]);
-
-  React.useEffect(() => {
-    generateServiceWindows()
-  }, [availableWindows])
 
   const get = (path = '', data = {}) => {
     return fetch(`${config.grocerbox_domain}/${path}`, {
@@ -152,8 +166,8 @@ function GrocerBoxComponent({ config }) {
             error: (error) => handleError(`Error adding Grocer Box product: ${error}`)
           });
         } else {
-          const [serviceType, code] = atob(grocerBoxItem.properties.code).split(':');
-          const windowIsAvailable = availableWindows.find(w => w.code === code);
+          const [_, code] = atob(grocerBoxItem.properties.code).split(':');
+          const windowIsAvailable = windows.find(w => w.code === code);
           if (!windowIsAvailable) {
             setVariant(firstVariant);
           }
@@ -210,11 +224,6 @@ function GrocerBoxComponent({ config }) {
     console.log(`Error: ${error}`);
   }
 
-  const refundableItem = cart ? cart.items.find(item => item.handle === config.refundable_hold_product) : null;
-
-  const windowCode = gbItem && gbItem.properties && gbItem.properties.code ? atob(gbItem.properties.code).split(':')[1] : null;
-  const serviceType = gbItem && gbItem.variant_options ? gbItem.variant_options[0] : null;
-
   const generateServiceWindows = () => {
     const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
@@ -241,8 +250,8 @@ function GrocerBoxComponent({ config }) {
         <SectionTitle>Would you like pickup or delivery?</SectionTitle>
 
         <Row>
-          <ServiceType active={serviceType === 'D' } disabled={loading} onClick={() => setServiceType('D')}>Delivery</ServiceType>
-          <ServiceType active={serviceType === 'P' } disabled={loading} onClick={() => setServiceType('P')}>Pickup</ServiceType>
+          <ServiceType active={serviceType === 'D' } disabled={loading || cartLoading} onClick={() => setServiceType('D')}>Delivery</ServiceType>
+          <ServiceType active={serviceType === 'P' } disabled={loading || cartLoading} onClick={() => setServiceType('P')}>Pickup</ServiceType>
         </Row>
       </Section>
 
@@ -253,7 +262,7 @@ function GrocerBoxComponent({ config }) {
             <ServiceWindow
               key={index}
               active={windowCode === window.code}
-              disabled={loading}
+              disabled={loading || cartLoading}
               onClick={() => setServiceWindow(window.code)}>
               <span>{window.day}</span>
               <p>{window.date}</p>
