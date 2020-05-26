@@ -40,6 +40,10 @@ const Button = window.styled.button`
   &.primary {
     background: #75a500;
   }
+
+  &:disabled {
+    cursor: not-allowed;
+  }
 `
 
 const Row = window.styled.div`
@@ -78,6 +82,7 @@ const ServiceWindowDate = window.styled.p`
   font-size: 2rem;
   margin: 0;
   font-weight: bold;
+  padding: 0;
 `
 
 const ServiceWindow = ({ active, loading, window, handleClick }) => {
@@ -275,6 +280,8 @@ function GrocerBoxComponent({ config }) {
     window.location='/checkout';
   }
 
+  const checkoutDisabled = !windowCode || !serviceType;
+
   return (
     <Container>
       <Section>
@@ -316,7 +323,18 @@ function GrocerBoxComponent({ config }) {
           <div className="gb-ellipsis">
             <div></div><div></div><div></div><div></div>
           </div> :
-          <Button className="primary" onClick={handleContinue} primary>Checkout</Button>
+
+          <React.Fragment>
+            <Button
+              className="primary"
+              onClick={handleContinue}
+              disabled={checkoutDisabled}
+              primary>
+              Checkout
+            </Button>
+
+            {checkoutDisabled ? <small>Select pickup and delivery options above to checkout</small> : ''}
+          </React.Fragment>
         }
       </Section>
     </Container>
