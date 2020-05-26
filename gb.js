@@ -1,5 +1,5 @@
 const Container = window.styled.div`
-  max-width: 750px;
+  max-width: 48rem;
   margin: 0 auto 1.5rem;
   text-align: center;
 `
@@ -13,54 +13,85 @@ const SectionTitle = window.styled.h2`
   margin-bottom: 1.5rem;
 `
 const Button = window.styled.button`
-  padding: 1rem 1.5rem;
-  font-size: 1.2rem;
+  background: white;
+  color: #666666;
+  border: 1px solid #dddddd;
+  width: 160px;
+  text-transform: uppercase;
+  height: 50px;
+  font-size: 13px;
+  font-weight: 700;
   cursor: pointer;
-  ${props => props.primary ?
-    `background: black;
-     color: white;` : ''
+  transition: 100ms all ease-in-out;
+
+  &:hover,
+  &.active,
+  &.primary {
+    border: 0;
+    color: white;
+  }
+
+  &:hover {
+    background: #898989;
+  }
+  &.active {
+    background: #414141;
+  }
+  &.primary {
+    background: #75a500;
   }
 `
 
 const Row = window.styled.div`
   display: flex;
+  ${props => props.wrap ? 'flex-wrap: wrap;': ''}
+  ${props => props.center ? 'justify-content: center;': ''}
 `
-const ServiceType = window.styled.button`
-  opacity: ${props => props.active ? '1' : '0.8rem'};
-  ${props => props.active ? 'background: black;' : ''}
-  ${props => props.active ?  'color: white;' : ''}
-  flex: 1;
-  margin: 0;
-  border: 1px solid black;
-  text-align: center;
-  max-width: 15rem;
-  padding: 1rem;
-  font-size: 1.2rem;
 
-  &:disabled {
-    color: grey;
-  }
-`
-const ServiceWindow = window.styled.button`
-  padding: 1rem;
+const ServiceWindowBtn = window.styled.button`
+  width: 12rem;
+  padding: 1rem 0;
+  font-size: 1.2rem;
   text-align: center;
-  border: 1px solid;
-  margin: 1rem;
-  cursor: pointer;
-  opacity: 0.5;
   transition: 50ms all ease-in-out;
-  ${props => props.active ? `
-  transform: scale(1.2);
-  opacity: 1;` :''}
+  border: 1px solid;
+  cursor: pointer;
+
+  opacity: 0.5;
 
   &:hover {
     opacity: 0.9;
   }
-
   &:disabled {
-    color: grey;
+    opacity: 0.5;
+  }
+
+  &.active {
+    opacity: 1;
+    background: #414141;
+    color: white;
+    border: 0;
   }
 `
+
+const ServiceWindowDate = window.styled.p`
+  font-size: 2rem;
+  margin: 0;
+  font-weight: bold;
+`
+
+const ServiceWindow = ({ active, loading, window, handleClick }) => {
+  return (
+    <ServiceWindowBtn
+      className={`${active ? 'active' : ''}`}
+      disabled={loading}
+      onClick={handleClick}>
+      <span>{window.day}</span>
+      <ServiceWindowDate>{window.date}</ServiceWindowDate>
+      <span>{window.name}</span>
+    </ServiceWindowBtn>
+  )
+}
 
 function GrocerBoxComponent({ config }) {
   const [availableWindows, setAvailableWindows] = React.useState([]);
@@ -241,7 +272,7 @@ function GrocerBoxComponent({ config }) {
   }
 
   const handleContinue = () => {
-    document.getElementById("gb-cart-btn").click();
+    window.location='/checkout';
   }
 
   return (
@@ -250,24 +281,32 @@ function GrocerBoxComponent({ config }) {
         <SectionTitle>Would you like pickup or delivery?</SectionTitle>
 
         <Row>
-          <ServiceType active={serviceType === 'D' } disabled={loading || cartLoading} onClick={() => setServiceType('D')}>Delivery</ServiceType>
-          <ServiceType active={serviceType === 'P' } disabled={loading || cartLoading} onClick={() => setServiceType('P')}>Pickup</ServiceType>
+          <Button
+            className={`${serviceType === 'D' ? 'active' : ''}`}
+            disabled={loading || cartLoading}
+            onClick={() => setServiceType('D')}>
+            Delivery
+          </Button>
+          <Button
+            className={`${serviceType === 'P' ? 'active' : ''}`}
+            disabled={loading || cartLoading}
+            onClick={() => setServiceType('P')}>
+            Pickup
+          </Button>
         </Row>
       </Section>
 
       <Section>
         <SectionTitle>When?</SectionTitle>
-        <Row>
+        <Row wrap center>
           {serviceWindows.map((window, index) =>
             <ServiceWindow
               key={index}
               active={windowCode === window.code}
-              disabled={loading || cartLoading}
-              onClick={() => setServiceWindow(window.code)}>
-              <span>{window.day}</span>
-              <p>{window.date}</p>
-              <span>{window.name}</span>
-            </ServiceWindow>
+              loading={loading || cartLoading}
+              handleClick={() => setServiceWindow(window.code)}
+              window={window}
+            />
           )}
         </Row>
       </Section>
@@ -277,7 +316,7 @@ function GrocerBoxComponent({ config }) {
           <div className="gb-ellipsis">
             <div></div><div></div><div></div><div></div>
           </div> :
-          <Button onClick={handleContinue} primary>Continue</Button>
+          <Button className="primary" onClick={handleContinue} primary>Checkout</Button>
         }
       </Section>
     </Container>
