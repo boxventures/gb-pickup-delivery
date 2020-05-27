@@ -103,13 +103,11 @@ function GrocerBoxComponent({ config }) {
   const [loading, setLoading] = React.useState(false);
   const [serviceWindows, setServiceWindows] = React.useState([]);
   const [product, setProduct] = React.useState();
-  const [cart, setCart] = React.useState();
+  const [cart, setCart] = React.useState(config.cart);
   const [gbItem, setGbItem] = React.useState();
   const [windowCode, setWindowCode] = React.useState();
   const [serviceType, setServiceTypeVal] = React.useState();
   const [cartLoading, setCartLoading] = React.useState(false);
-
-  const refundableItem = cart ? cart.items.find(item => item.handle === config.refundable_hold_product) : null;
 
   // Effects
   React.useEffect(() => {
@@ -157,14 +155,9 @@ function GrocerBoxComponent({ config }) {
 
   // Functions
   const init = () => {
-    CartJS.getCart().then(res => {
-      setCart(res);
-
-      getAvailableWindows().then((windows) => {
-        setAvailableWindows(windows);
-        setGrocerBoxItem(res.items, windows);
-        setRefundableItem(res.items);
-      });
+    getAvailableWindows().then((windows) => {
+      setAvailableWindows(windows);
+      setGrocerBoxItem(cart.items, windows);
     });
   }
 
@@ -209,17 +202,6 @@ function GrocerBoxComponent({ config }) {
           }
         }
       });
-  }
-  const setRefundableItem = (items) => {
-    if (!items.find(item => item.handle === config.refundable_hold_product)) {
-      getProduct(config.refundable_hold_product).then(product => {
-        if (product && product.variants.length) {
-          CartJS.addItem(product.variants[0].id, 1, {}, {
-            error: (error) => handleError(`Error adding Refundable Hold: ${error}`)
-          });
-        }
-      });
-    }
   }
 
   const setServiceType = (type) => {
@@ -305,7 +287,7 @@ function GrocerBoxComponent({ config }) {
 
       <Section>
         <SectionTitle>When?</SectionTitle>
-        <Row wrap center>
+        <Row wrap="wrap" center="center">
           {serviceWindows.map((window, index) =>
             <ServiceWindow
               key={index}
