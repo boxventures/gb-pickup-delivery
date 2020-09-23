@@ -283,7 +283,7 @@ function GrocerBoxComponent({ config }) {
 
       <div>
         <p><small>Pickup or Delivery can be selected at checkout.</small></p>
-        <form method="post" action="{{ routes.cart_url }}" noValidate="novalidate">
+        <form method="post" action={`${window.SHOPIFY_CART_URL}`} noValidate="novalidate">
           <input type="hidden" name="attributes[collection_products_per_page]" value="" />
           <input type="hidden" name="attributes[collection_layout]" value="" />
 
