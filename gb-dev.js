@@ -126,7 +126,6 @@ function GrocerBoxComponent({ config }) {
   const [cartLoading, setCartLoading] = React.useState(false);
   const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-  {% comment %} These need to be consistent with the keys in the email notifications and backend Order {% endcomment %}
   const WINDOW_NAME_KEY = 'window';
   const WINDOW_CODE_KEY = 'code';
   const DATE_KEY = 'Date';
@@ -136,7 +135,6 @@ function GrocerBoxComponent({ config }) {
   // Effects
   React.useEffect(() => {
     $(() => {
-      {% comment %} For some reason the getCart sometimes returns undefined {% endcomment %}
       const cartPromise = CartJS.getCart();
       if (cartPromise){
         cartPromise.then(c => {
@@ -145,7 +143,6 @@ function GrocerBoxComponent({ config }) {
         });
       }
     });
-    {% comment %} init(); {% endcomment %}
 
     $(document).on('cart.ready', (event, c) => {
       console.log('cart ready: ', c)
