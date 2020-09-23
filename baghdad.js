@@ -121,7 +121,6 @@ function GrocerBoxComponent({ config }) {
   const [checkout, setCheckout] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
   const [loaded, setLoaded] = React.useState(false);
-  const [loaded, setLoaded] = React.useState(false);
   const [serviceWindows, setServiceWindows] = React.useState([]);
   const [cart, setCart] = React.useState();
   const [windowCode, setWindowCode] = React.useState();
