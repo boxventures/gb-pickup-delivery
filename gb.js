@@ -1,240 +1,242 @@
 const Container = window.styled.div`
-  max-width: 48rem;
   margin: 0 auto 1.5rem;
-  text-align: center;
 `
-const Section = window.styled.section`
-  margin: 1.5rem auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-`
-const SectionTitle = window.styled.h2`
-  margin-bottom: 1.5rem;
-`
-const Button = window.styled.button`
-  background: white;
-  color: #666666;
-  border: 1px solid #dddddd;
-  width: 160px;
-  text-transform: uppercase;
-  height: 50px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: 100ms all ease-in-out;
 
-  &:hover,
-  &.active,
-  &.primary {
-    border: 0;
-    color: white;
-  }
-
-  &:hover {
-    background: #898989;
-  }
-  &.active {
-    background: #414141;
-  }
-  &.primary {
-    background: #75a500;
+const CheckoutButton = window.styled.button`
+  &:disabled {
+    background: grey;
+    border: none;
   }
 
   &:disabled {
-    cursor: not-allowed;
+    &:hover {
+      background: grey;
+    }
   }
 `
 
-const Row = window.styled.div`
-  display: flex;
-  ${props => props.wrap ? 'flex-wrap: wrap;': ''}
-  ${props => props.center ? 'justify-content: center;': ''}
+const LoadingSpinner = window.styled.div`
+  z-index: 1000;
+  border: none;
+  margin: 0px;
+  padding: 0px;
+  width: 100%;
+  height: 100%;
+  top: 0px;
+  left: 0px;
+  background: rgb(255, 255, 255);
+  opacity: 0.6;
+  cursor: default;
+  position: absolute;
+
+  @keyframes spin {
+    100% {
+      transform:rotate(360deg);
+    }
+  }
+
+  &:after {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    margin-left: -13px;
+    margin-top: -13px;
+    content: "";
+    width: 26px;
+    height: 26px;
+    display: inline-block;
+    vertical-align: middle;
+    border: 1px solid #bbb;
+    border-left-color: #000;
+    border-radius: 50%;
+    animation: spin 450ms infinite linear;
+  }
+`
+const CarouselContainer = window.styled.div`
+  padding-bottom: 1rem;
+  overflow-y: hidden;
+  display: block;
+  margin-top: 1rem;
 `
 
 const ServiceWindowBtn = window.styled.button`
-  width: 12rem;
-  padding: 1rem 0;
-  font-size: 1.2rem;
+  width: 7rem;
+  padding: 0;
+  font-size: 1rem;
   text-align: center;
   transition: 50ms all ease-in-out;
-  border: 1px solid;
   cursor: pointer;
-
   opacity: 0.5;
+  background: transparent;
+  border: 0;
+  color: {{ settings.color_button_text }};
 
   &:hover {
     opacity: 0.9;
   }
+
   &:disabled {
     opacity: 0.5;
   }
 
   &.active {
     opacity: 1;
-    background: #414141;
-    color: white;
-    border: 0;
+    background: rgba(128, 128, 128, 0.1);
   }
 `
 
-const ServiceWindowDate = window.styled.p`
-  font-size: 2rem;
-  margin: 0;
+const ServiceWindowDate = window.styled.div`
+  line-height: 1em;
+  margin-top: 10px;
+  font-size: 4rem;
   font-weight: bold;
-  padding: 0;
 `
+
+const TextArea = window.styled.textarea`
+  &::placeholder {
+    color: grey;
+  }
+}`
 
 const ServiceWindow = ({ active, loading, window, handleClick }) => {
   return (
     <ServiceWindowBtn
-      className={`${active ? 'active' : ''}`}
+      className={`${active ? 'active' : ''} carousel-cell`}
       disabled={loading}
-      onClick={handleClick}>
+      onClick={handleClick}
+      id={`window-${window.code}`}>
       <span>{window.day}</span>
       <ServiceWindowDate>{window.date}</ServiceWindowDate>
-      <span>{window.name}</span>
+      <div>{window.month}</div>
+      <div>{window.name}</div>
     </ServiceWindowBtn>
   )
 }
 
 function GrocerBoxComponent({ config }) {
+  const baseUri = 'https://www.getgrocerbox.com';
+  const shopify_domain = Shopify.shop.replace('.myshopify.com', '');
+  const refundableHold = '{{ settings.refundable_hold_product }}';
   const [availableWindows, setAvailableWindows] = React.useState([]);
-  const [loading, setLoading] = React.useState(false);
+  const [checkout, setCheckout] = React.useState([]);
+  const [loaded, setLoaded] = React.useState(false);
   const [serviceWindows, setServiceWindows] = React.useState([]);
-  const [product, setProduct] = React.useState();
-  const [cart, setCart] = React.useState({ ...config.cart });
-  const [gbItem, setGbItem] = React.useState();
+  const [cart, setCart] = React.useState();
   const [windowCode, setWindowCode] = React.useState();
   const [serviceType, setServiceTypeVal] = React.useState();
   const [cartLoading, setCartLoading] = React.useState(false);
+  const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+  {% comment %} These need to be consistent with the keys in the email notifications and backend Order {% endcomment %}
+  const WINDOW_NAME_KEY = 'window';
+  const WINDOW_CODE_KEY = 'code';
+  const DATE_KEY = 'Date';
+  const DELIVERY_NOTE = 'Delivery Note';
+  let flkty = null;
 
   // Effects
   React.useEffect(() => {
-    init();
+    $(() => {
+      {% comment %} For some reason the getCart sometimes returns undefined {% endcomment %}
+      const cartPromise = CartJS.getCart();
+      if (cartPromise){
+        cartPromise.then(c => {
+          console.log({ c });
+          setCart(c);
+        });
+      }
+    });
+    {% comment %} init(); {% endcomment %}
 
     $(document).on('cart.ready', (event, c) => {
-      // console.log({ event, c })
+      console.log('cart ready: ', c)
     });
 
     $(document).on('cart.requestStarted', (event, c) => {
-      // console.log({ event, c })
       setCartLoading(true);
     });
 
     $(document).on('cart.requestComplete', (event, c) => {
-      // console.log({ event, c })
       setCartLoading(false);
       setCart({ ...c });
     });
   }, []);
 
   React.useEffect(() => {
-    if (cart) {
-      const item = cart.items.find(item => item.handle === config.grocerbox_product);
-      setGbItem({ ...item })
-    }
-  }, [cart]);
+    if (availableWindows.length > 0 && !flkty) {
+      let initialIndex = 0;
+      if (cart.attributes[WINDOW_CODE_KEY]) {
+        initialIndex = availableWindows.map(w => w.code).indexOf(cart.attributes[WINDOW_CODE_KEY]);
+      }
 
-  React.useEffect(() => {
-    if (gbItem && gbItem.properties && gbItem.properties.code) {
-      setWindowCode(atob(gbItem.properties.code).split(':')[1])
+      setTimeout(() => {
+        flkty = new Flickity( '.window-carousel', {
+          // options
+          cellAlign: 'left',
+          draggable: true,
+          initialIndex,
+          pageDots: false
+        });
+      }, 0)
     }
-    if (gbItem && gbItem.variant_options) {
-      setServiceTypeVal(gbItem.variant_options[0]);
-    }
-  }, [gbItem]);
-
-  React.useEffect(() => {
-    // console.log({ product })
-  }, [product]);
+  }, [availableWindows]);
 
   React.useEffect(() => {
     generateServiceWindows()
   }, [availableWindows]);
 
-  // Functions
-  const init = () => {
-    getAvailableWindows().then((windows) => {
-      setAvailableWindows(windows);
-      setGrocerBoxItem(cart.items, windows);
-    });
-  }
+  React.useEffect(() => {
+    if (cart && !loading && !loaded && availableWindows.length === 0) {
+      getAvailableWindows(cart);
+    }
+  }, [cart]);
 
-  const get = (path = '', data = {}) => {
-    return fetch(`${config.grocerbox_domain}/${path}`, {
+  // Functions
+
+  const get = (path = '') => {
+    return fetch(`${baseUri}/${path}`, {
       method: 'GET', // *GET, POST, PUT, DELETE, etc.
       mode: 'cors', // no-cors, *cors, same-origin
       cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
     });
   }
 
-  const getAvailableWindows = () => {
-    return get(`shopify/private_shops/available_windows/${config.shopify_domain}`)
-      .then(res => res.json())
-      .catch(error => handleError(`GrocerBox: Error fetching available windows: ${error}`));
-  }
+  const getAvailableWindows = (cart) => {
+    setLoading(true);
 
-  const getProduct = (handle) => {
-    return fetch(`/products/` + handle + '.js')
-      .then(res => res.json())
-      .catch(error => handleError(`GrocerBox: Error fetching product '${handle}': ${error}`))
-  }
+    const collections = [
+      {% for item in cart.items %}
+        {% for collection in all_products[item.product.handle].collections %}
+          '{{ collection.title }}',
+        {% endfor %}
+      {% endfor %}
+    ];
 
-  // If no gb item, set to first variant.
-  // If gb item but window not available, reset to first variant.
-  const setGrocerBoxItem = (items, windows) => {
-    getProduct(config.grocerbox_product)
-      .then(res => {
-        setProduct(res);
-        const firstVariant = res.variants[0];
-        const grocerBoxItem = items.find(item => item.handle === config.grocerbox_product);
-        if (!grocerBoxItem) {
-          const window = windows[parseInt(firstVariant.option2, 10)];
-          CartJS.addItem(firstVariant.id, 1, { code: btoa(`${firstVariant.option1}:${window.code}`) }, {
-            error: (error) => handleError(`Error adding Grocer Box product: ${error}`)
+    get(`shopify/private_shops/${encodeURIComponent(shopify_domain)}/available_windows?collections=${encodeURIComponent(collections.join(','))}`)
+      .then(res => res.json())
+      .then((windows) => {
+        setAvailableWindows(windows);
+        if (cart.attributes[DATE_KEY] && !windows.find(w => w.date === cart.attributes[DATE_KEY])) {
+          CartJS.setAttribute({
+            [DATE_KEY]: null,
+            [WINDOW_NAME_KEY]: null,
+            [WINDOW_CODE_KEY]: null
           });
-        } else {
-          const [_, code] = atob(grocerBoxItem.properties.code).split(':');
-          const windowIsAvailable = windows.find(w => w.code === code);
-          if (!windowIsAvailable) {
-            setVariant(firstVariant);
-          }
         }
+      })
+      .catch(error => handleError(`GrocerBox: Error fetching available windows: ${error}`))
+      .finally(() => {
+        setLoading(false);
+        setLoaded(true);
       });
   }
 
-  const setServiceType = (type) => {
-    const variant = findVariant(type, windowCode);
-    setVariant(variant);
-  }
-
-  const setServiceWindow = (code) => {
-    const variant = findVariant(gbItem.variant_options[0], code);
-    setVariant(variant);
-  }
-
-  const findVariant = (type, code) => {
-    const index = availableWindows.map(w => w.code).indexOf(code);
-    return product.variants.find(variant =>
-      variant.option1.toLowerCase() === type.toLowerCase() &&
-      variant.option2 === `${index}`)
-  }
-
-  const setVariant = (variant) => {
-    const code = availableWindows[parseInt(variant.option2, 10)].code;
-    const type = variant.option1;
-    const properties = { code: btoa(`${type}:${code}`) }
-    setLoading(true)
-    CartJS.removeItemById(gbItem.id, {
-      success: (data, textStatus, jqXHR) => {
-        CartJS.addItem(variant.id, 1, properties, {
-          success: () => setLoading(false),
-          error: (error) => handleError(`Error adding variant: ${JSON.stringify(error)}`)
-        });
-      },
-      error: (error) => handleError(`Error removing variant: ${JSON.stringify(error)}`)
-    })
+  const selectWindow = (window) => {
+    CartJS.setAttributes({
+      [DATE_KEY]: window.date,
+      [WINDOW_CODE_KEY]: window.code,
+      [WINDOW_NAME_KEY]: window.name
+    });
   }
 
   const handleError = (error) => {
@@ -243,82 +245,83 @@ function GrocerBoxComponent({ config }) {
   }
 
   const generateServiceWindows = () => {
-    const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-    const options = availableWindows.map((window) => {
-      const [year, month, day] = window.date.split('-');
-      const date = new Date(year, parseInt(month, 10) - 1, day);
-      return {
-        code: window.code,
-        day: weekdays[date.getDay()],
-        date: `${months[date.getMonth()]} ${date.getDate()}`,
-        name: window.name,
-      };
-    });
-    setServiceWindows(options);
+    setServiceWindows(availableWindows.map(formatWindow));
+  }
+
+  const formatWindow = (window) => {
+    const [year, month, day] = window.date.split('-');
+    const date = new Date(year, parseInt(month, 10) - 1, day);
+    return {
+      window: window,
+      code: window.code,
+      day: weekdays[date.getDay()],
+      month: months[date.getMonth()],
+      date: date.getDate(),
+      name: window.name,
+    };
   }
 
   const handleContinue = () => {
     window.location='/checkout';
   }
 
-  const checkoutDisabled = !windowCode || !serviceType;
+  const selectedWindow = cart && cart.attributes[WINDOW_CODE_KEY] ?
+    availableWindows.find(w => cart.attributes[WINDOW_CODE_KEY] === w.code) : null;
+  const selected = selectedWindow ? formatWindow(selectedWindow) : null;
+  // Checkout button should be disabled if loading, cart not loaded, window not selected or the only item in the cart is the refundable credit card hold item
+  const checkoutDisabled = loading || cartLoading || !cart || !cart.attributes[WINDOW_CODE_KEY] || (cart.items.length === 1 && cart.items.find(item => item.handle === refundableHold)) || !selectedWindow;
 
   return (
     <Container>
-      <Section>
-        <SectionTitle>Would you like pickup or delivery?</SectionTitle>
+      <div>
+        { loading ? <LoadingSpinner /> : '' }
+        <h3>Select Time Slot</h3>
 
-        <Row>
-          <Button
-            className={`${serviceType === 'D' ? 'active' : ''}`}
-            disabled={loading || cartLoading}
-            onClick={() => setServiceType('D')}>
-            Delivery
-          </Button>
-          <Button
-            className={`${serviceType === 'P' ? 'active' : ''}`}
-            disabled={loading || cartLoading}
-            onClick={() => setServiceType('P')}>
-            Pickup
-          </Button>
-        </Row>
-      </Section>
+        { selected ? <p className="cart-item--content-title">{selected.day} {selected.month} {selected.date}, {selected.name}</p> : <p>Select your time slot.</p> }
+      </div>
 
-      <Section>
-        <SectionTitle>When?</SectionTitle>
-        <Row wrap="wrap" center="center">
-          {serviceWindows.map((window, index) =>
-            <ServiceWindow
-              key={index}
-              active={windowCode === window.code}
-              loading={loading || cartLoading}
-              handleClick={() => setServiceWindow(window.code)}
-              window={window}
-            />
-          )}
-        </Row>
-      </Section>
+      <CarouselContainer className="window-carousel">
+        {serviceWindows.map((window, index) =>
+          <ServiceWindow
+            key={index}
+            active={selectedWindow ? selectedWindow.code === window.code : false}
+            loading={loading || cartLoading}
+            handleClick={() => selectWindow(window.window)}
+            window={window}
+          />
+        )}
+      </CarouselContainer>
 
-      <Section>
-        { loading ?
-          <div className="gb-ellipsis">
-            <div></div><div></div><div></div><div></div>
-          </div> :
+      <div>
+        <p><small>Pickup or Delivery can be selected at checkout.</small></p>
+        <form method="post" action="{{ routes.cart_url }}" noValidate="novalidate">
+          <input type="hidden" name="attributes[collection_products_per_page]" value="" />
+          <input type="hidden" name="attributes[collection_layout]" value="" />
 
-          <React.Fragment>
-            <Button
-              className="primary"
-              onClick={handleContinue}
-              disabled={checkoutDisabled}
-              primary>
-              Checkout
-            </Button>
+          <div className="form-field">
+            <label className="form-field-title" htmlFor="order-notes">
+              Order Instructions
+            </label>
 
-            {checkoutDisabled ? <small>Select pickup and delivery options above to checkout</small> : ''}
-          </React.Fragment>
-        }
-      </Section>
+            <textarea id="order-notes" className="form-field-input form-field-textarea" placeholder="Let us know here if you have any special requests." onBlur={(event) => CartJS.setNote(event.target.value)} rows="3" defaultValue={ cart ? cart.note : '' }></textarea>
+          </div>
+
+          <div className="form-field">
+            <label className="form-field-title" htmlFor="delivery-notes">
+              Delivery Notes
+            </label>
+
+            <textarea id="delivery-notes" className="form-field-input form-field-textarea" placeholder="Indicate any delivery instructions, buzzer numbers, etc." onBlur={(event) => CartJS.setAttribute(DELIVERY_NOTE, event.target.value)} rows="3" defaultValue={cart ? cart.attributes[DELIVERY_NOTE] : ''}></textarea>
+          </div>
+
+          <CheckoutButton type="submit" name="checkout" disabled={checkoutDisabled} className="button-primary cart-title-button" aria-label="Checkout">Checkout</CheckoutButton>
+        </form>
+      </div>
     </Container>
   )
 }
+
+ReactDOM.render(
+  <GrocerBoxComponent />,
+  document.getElementById('gb-component')
+);
